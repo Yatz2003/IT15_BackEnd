@@ -19,12 +19,11 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'admin@example.com',
-            'password' => Hash::make('password')
+            'password' => Hash::make('passwordjames')
         ]);
         $this->call([
-            CategorySeeder::class,
-            PostSeeder::class,
             CourseSeeder::class,
+            SubjectSeeder::class,
             StudentSeeder::class,
             SchoolDaySeeder::class,
         ]);

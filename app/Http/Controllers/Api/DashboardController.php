@@ -11,14 +11,24 @@ use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
+    public function overview(): JsonResponse
+    {
+        return $this->buildOverviewResponse();
+    }
+
     public function summary(): JsonResponse
+    {
+        return $this->buildOverviewResponse();
+    }
+
+    private function buildOverviewResponse(): JsonResponse
     {
         $latestSchoolDay = SchoolDay::query()->latest('date')->first();
 
         return response()->json([
             'data' => [
                 'students_total' => Student::query()->count(),
-                'courses_total' => Course::query()->count(),
+                'programs_total' => Course::query()->count(),
                 'school_days_total' => SchoolDay::query()->count(),
                 'average_attendance_rate' => round((float) SchoolDay::query()
                     ->where('is_holiday', false)

@@ -8,37 +8,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
- * @property string $name
- * @property string $email
- * @property int $age
- * @property string $gender
- * @property int|null $course_id
+ * @property string $code
+ * @property string $subject_name
  * @property int|null $program_id
+ * @property string $department
+ * @property int $units
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read Course|null $program
- * @property-read Course|null $course
  */
-class Student extends Model
+class Subject extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'email',
-        'age',
-        'gender',
-        'course_id',
+        'code',
+        'subject_name',
         'program_id',
+        'department',
+        'units',
     ];
 
     public function program(): BelongsTo
     {
         return $this->belongsTo(Course::class, 'program_id');
-    }
-
-    public function course(): BelongsTo
-    {
-        return $this->belongsTo(Course::class);
     }
 }

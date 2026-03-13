@@ -18,6 +18,8 @@ class StudentResource extends JsonResource
             'email' => $this->email,
             'age' => $this->age,
             'gender' => $this->gender,
+            'program_id' => $this->program_id ?? $this->course_id,
+            'program' => new CourseResource($this->whenLoaded('program')),
             'course_id' => $this->course_id,
             'course' => new CourseResource($this->whenLoaded('course')),
             'created_at' => $this->created_at,

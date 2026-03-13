@@ -15,21 +15,24 @@ class StudentSeeder extends Seeder
     public function run(): void
     {
         $faker = fake();
-        $courseIds = Course::query()->pluck('id');
+        $programIds = Course::query()->pluck('id');
 
-        if ($courseIds->isEmpty()) {
+        if ($programIds->isEmpty()) {
             return;
         }
 
         $rows = [];
 
         for ($i = 0; $i < 500; $i++) {
+            $programId = $programIds->random();
+
             $rows[] = [
                 'name' => $faker->name(),
                 'email' => $faker->unique()->safeEmail(),
                 'age' => $faker->numberBetween(16, 28),
                 'gender' => $faker->randomElement(['male', 'female', 'other']),
-                'course_id' => $courseIds->random(),
+                'course_id' => $programId,
+                'program_id' => $programId,
                 'created_at' => Carbon::now()->subDays($faker->numberBetween(0, 540)),
                 'updated_at' => now(),
             ];
