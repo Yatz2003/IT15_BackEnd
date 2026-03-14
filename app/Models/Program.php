@@ -8,21 +8,34 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
- * @property string $course_name
+ * @property string $program_name
  * @property string $department
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read int|null $students_count
  */
-class Course extends Model
+class Program extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'course_name',
+        'program_name',
         'department',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     public function students(): HasMany
     {
         return $this->hasMany(Student::class);
+    }
+
+    public function subjects(): HasMany
+    {
+        return $this->hasMany(Subject::class);
     }
 }

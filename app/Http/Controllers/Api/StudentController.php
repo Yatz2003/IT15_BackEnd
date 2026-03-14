@@ -3,48 +3,54 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\StudentResource;
+use App\Http\Requests\Api\StudentsIndexRequest;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class StudentController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(StudentsIndexRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
-        ]);
+        $validated = $request->validated();
 
-        $students = Student::query()
-            ->with(['program', 'course'])
-            ->latest('created_at')
+        $studentsQuery = Student::query()->with('program');
+
+        if (isset($validated['program_id'])) {
+            $studentsQuery->where('program_id', $validated['program_id']);
+        }
+
+        if (isset($validated['year_level'])) {
+            $studentsQuery->where('year_level', $validated['year_level']);
+        }
+
+        if (! empty($validated['q'])) {
+            $studentsQuery->where(function ($query) use ($validated): void {
+                $query->where('name', 'like', '%'.$validated['q'].'%')
+                    ->orWhere('email', 'like', '%'.$validated['q'].'%');
+            });
+        }
+
+        $students = $studentsQuery
+            ->orderBy('name')
             ->paginate($validated['per_page'] ?? 50);
 
-        return StudentResource::collection($students)->response();
-    }
-
-    public function enrollmentTrends(): JsonResponse
-    {
-        $driver = DB::connection()->getDriverName();
-        $periodExpression = $driver === 'pgsql'
-            ? "to_char(created_at, 'YYYY-MM')"
-            : "DATE_FORMAT(created_at, '%Y-%m')";
-
-        // Aggregate student signups per month for dashboard line charts.
-        $rows = Student::query()
-            ->selectRaw("{$periodExpression} as period")
-            ->selectRaw('COUNT(*) as total')
-            ->groupBy('period')
-            ->orderBy('period')
-            ->get();
-
         return response()->json([
-            'data' => $rows->map(fn ($row) => [
-                'period' => $row->period,
-                'total' => (int) $row->total,
+            'data' => $students->getCollection()->map(fn (Student $student) => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'email' => $student->email,
+                'program_id' => $student->program_id,
+                'program_name' => $student->program?->program_name,
+                'department' => $student->program?->department,
+                'year_level' => (int) $student->year_level,
+                'created_at' => $student->created_at?->toIso8601String(),
             ]),
+            'meta' => [
+                'current_page' => $students->currentPage(),
+                'last_page' => $students->lastPage(),
+                'per_page' => $students->perPage(),
+                'total' => $students->total(),
+            ],
         ]);
     }
 }

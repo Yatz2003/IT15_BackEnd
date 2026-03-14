@@ -15,12 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->unsignedTinyInteger('age');
-            $table->enum('gender', ['male', 'female', 'other']);
-            $table->foreignId('course_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('program_id')->constrained('programs')->cascadeOnDelete();
+            $table->unsignedTinyInteger('year_level');
             $table->timestamps();
 
-            $table->index(['course_id', 'created_at']);
+            $table->index(['program_id', 'year_level']);
+            $table->index('created_at');
         });
     }
 

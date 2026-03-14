@@ -3,28 +3,35 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Course;
+use App\Http\Requests\Api\ProgramsIndexRequest;
+use App\Models\Program;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
 class ProgramController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(ProgramsIndexRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
-        ]);
+        $validated = $request->validated();
 
-        $programs = Course::query()
+        $programsQuery = Program::query()
             ->withCount('students')
-            ->orderBy('course_name')
-            ->paginate($validated['per_page'] ?? 100);
+            ->orderBy('program_name');
 
-        $rows = $programs->getCollection()->map(fn (Course $program) => [
+        if (! empty($validated['department'])) {
+            $programsQuery->where('department', $validated['department']);
+        }
+
+        if (array_key_exists('is_active', $validated)) {
+            $programsQuery->where('is_active', $validated['is_active']);
+        }
+
+        $programs = $programsQuery->paginate($validated['per_page'] ?? 100);
+
+        $rows = $programs->getCollection()->map(fn (Program $program) => [
             'id' => $program->id,
-            'program_name' => $program->course_name,
+            'program_name' => $program->program_name,
             'department' => $program->department,
+            'is_active' => (bool) $program->is_active,
             'enrolled_students' => (int) $program->students_count,
         ]);
 
@@ -36,20 +43,6 @@ class ProgramController extends Controller
                 'per_page' => $programs->perPage(),
                 'total' => $programs->total(),
             ],
-            'charts' => [
-                'students_by_department' => $this->studentsByDepartment($rows),
-            ],
         ]);
-    }
-
-    private function studentsByDepartment(Collection $rows): Collection
-    {
-        return $rows
-            ->groupBy('department')
-            ->map(fn (Collection $group, string $department) => [
-                'department' => $department,
-                'students_total' => (int) $group->sum('enrolled_students'),
-            ])
-            ->values();
     }
 }

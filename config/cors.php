@@ -1,14 +1,19 @@
 <?php
 
+$frontendOrigins = array_filter(array_map(
+    'trim',
+    explode(',', (string) env('FRONTEND_URLS', env('FRONTEND_URL', 'http://localhost:5173')))
+));
+
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:5173'),
+    'allowed_origins' => array_values(array_unique(array_merge($frontendOrigins, [
+        'http://localhost:5173',
         'http://localhost:3000',
-    ],
+    ]))),
 
     'allowed_origins_patterns' => [],
 

@@ -3,40 +3,59 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Student;
+use App\Http\Requests\Api\EnrollmentsIndexRequest;
+use App\Models\Enrollment;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class EnrollmentController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(EnrollmentsIndexRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
-        ]);
+        $validated = $request->validated();
 
-        $enrollments = Student::query()
-            ->with('program:id,course_name,department')
-            ->latest('created_at')
-            ->paginate($validated['per_page'] ?? 50);
+        $enrollmentsQuery = Enrollment::query()
+            ->with([
+                'student:id,name,email,program_id,year_level',
+                'subject:id,subject_name,program_id',
+                'subject.program:id,program_name,department',
+            ])
+            ->latest('enrolled_at');
+
+        if (isset($validated['student_id'])) {
+            $enrollmentsQuery->where('student_id', $validated['student_id']);
+        }
+
+        if (isset($validated['subject_id'])) {
+            $enrollmentsQuery->where('subject_id', $validated['subject_id']);
+        }
+
+        if (isset($validated['program_id'])) {
+            $enrollmentsQuery->whereHas('subject', function ($query) use ($validated): void {
+                $query->where('program_id', $validated['program_id']);
+            });
+        }
+
+        $enrollments = $enrollmentsQuery->paginate($validated['per_page'] ?? 50);
 
         return response()->json([
-            'data' => $enrollments->getCollection()->map(fn (Student $student) => [
-                'enrollment_id' => $student->id,
-                'program_id' => $student->program_id ?? $student->course_id,
+            'data' => $enrollments->getCollection()->map(fn (Enrollment $enrollment) => [
+                'id' => $enrollment->id,
+                'enrolled_at' => $enrollment->enrolled_at?->toIso8601String(),
                 'student' => [
-                    'id' => $student->id,
-                    'name' => $student->name,
-                    'email' => $student->email,
+                    'id' => $enrollment->student?->id,
+                    'name' => $enrollment->student?->name,
+                    'email' => $enrollment->student?->email,
+                    'year_level' => $enrollment->student?->year_level,
                 ],
-                'program' => $student->program ? [
-                    'id' => $student->program->id,
-                    'name' => $student->program->course_name,
-                    'department' => $student->program->department,
+                'subject' => [
+                    'id' => $enrollment->subject?->id,
+                    'subject_name' => $enrollment->subject?->subject_name,
+                ],
+                'program' => $enrollment->subject?->program ? [
+                    'id' => $enrollment->subject->program->id,
+                    'program_name' => $enrollment->subject->program->program_name,
+                    'department' => $enrollment->subject->program->department,
                 ] : null,
-                'status' => 'active',
-                'enrolled_at' => Carbon::parse($student->created_at)->toIso8601String(),
             ]),
             'meta' => [
                 'current_page' => $enrollments->currentPage(),

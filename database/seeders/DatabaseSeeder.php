@@ -21,10 +21,12 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@example.com',
             'password' => Hash::make('passwordjames')
         ]);
+
         $this->call([
-            CourseSeeder::class,
+            ProgramSeeder::class,
             SubjectSeeder::class,
             StudentSeeder::class,
+            EnrollmentSeeder::class,
             SchoolDaySeeder::class,
         ]);
     }

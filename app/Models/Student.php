@@ -5,19 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
  * @property string $name
  * @property string $email
- * @property int $age
- * @property string $gender
- * @property int|null $course_id
- * @property int|null $program_id
+ * @property int $program_id
+ * @property int $year_level
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read Course|null $program
- * @property-read Course|null $course
+ * @property-read Program $program
  */
 class Student extends Model
 {
@@ -26,19 +24,17 @@ class Student extends Model
     protected $fillable = [
         'name',
         'email',
-        'age',
-        'gender',
-        'course_id',
         'program_id',
+        'year_level',
     ];
 
     public function program(): BelongsTo
     {
-        return $this->belongsTo(Course::class, 'program_id');
+        return $this->belongsTo(Program::class);
     }
 
-    public function course(): BelongsTo
+    public function enrollments(): HasMany
     {
-        return $this->belongsTo(Course::class);
+        return $this->hasMany(Enrollment::class);
     }
 }

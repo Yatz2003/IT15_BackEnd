@@ -1,13 +1,13 @@
-# School Dashboard API (Laravel)
+# University Enrollment Dashboard API
 
-Backend API for a React school academic dashboard.
+Laravel REST API backend for a React enrollment analytics dashboard.
 
 ## Stack
 
 - Laravel 12
 - MySQL
-- Laravel Sanctum (token auth)
-- JSON REST API
+- Laravel Sanctum (Bearer token auth)
+- REST JSON API
 
 ## Quick Setup
 
@@ -19,202 +19,128 @@ php artisan migrate:fresh --seed
 php artisan serve
 ```
 
-Set your frontend origin in `.env`:
+Set React frontend origins in `.env`:
 
 ```env
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URLS=http://localhost:5173,http://localhost:3000
 ```
+
+## Data Model
+
+Core entities and relationships:
+
+- Program: has many students, has many subjects
+- Student: belongs to program, has many enrollments
+- Subject: belongs to program, optional prerequisite subject, has many enrollments
+- Enrollment: belongs to student, belongs to subject
+- SchoolDay: attendance trend points with holiday flag
 
 ## Seeded Data
 
-- Programs: 22+ records
-- Students: 500+ records
-- Subjects: seeded and linked to programs
-- School days: academic dates with attendance and holiday flags
+- Programs: 24 records (`program_name`, `department`, `is_active`)
+- Students: 500 records (`name`, `email`, `program_id`, `year_level`)
+- Subjects: generated per program with optional `prerequisite_id`
+- Enrollments: realistic student-to-subject enrollment records
+- SchoolDays: academic calendar with `attendance_rate` and holiday flags
 
 ## Authentication (Sanctum)
 
-All endpoints below require `Authorization: Bearer <token>` except `/api/login`.
+All dashboard/data endpoints require `Authorization: Bearer <token>`.
 
-### `POST /api/login`
+### POST /api/login
 
 Request:
 
 ```json
 {
-	"email": "admin@example.com",
-	"password": "passwordjames",
-	"device_name": "react-web"
+  "email": "admin@example.com",
+  "password": "passwordjames",
+  "device_name": "react-web"
 }
 ```
 
-Response `200`:
+Response:
 
 ```json
 {
-	"user": {
-		"id": 1,
-		"name": "Test User",
-		"email": "admin@example.com"
-	},
-	"token": "1|plain-text-token",
-	"token_type": "Bearer"
+  "user": {
+    "id": 1,
+    "name": "Test User",
+    "email": "admin@example.com"
+  },
+  "token": "1|plain-text-token",
+  "token_type": "Bearer"
 }
 ```
 
-### `POST /api/logout`
+### POST /api/logout
 
-Response `200`:
+Revokes the current token.
+
+### GET /api/user
+
+Returns the authenticated user.
+
+## API Endpoints
+
+Protected with `auth:sanctum`:
+
+- GET /api/dashboard/overview
+- GET /api/students
+- GET /api/programs
+- GET /api/subjects
+- GET /api/enrollments
+- GET /api/reports
+
+### Query Parameters
+
+- `GET /api/students`: `per_page`, `program_id`, `year_level`, `q`
+- `GET /api/programs`: `per_page`, `department`, `is_active`
+- `GET /api/subjects`: `per_page`, `program_id`, `q`
+- `GET /api/enrollments`: `per_page`, `student_id`, `subject_id`, `program_id`
+- `GET /api/dashboard/overview`: `months`
+- `GET /api/reports`: `months`
+
+## Dashboard Overview Response
+
+`GET /api/dashboard/overview` returns chart-ready data:
 
 ```json
 {
-	"message": "Logged out successfully."
+  "students_count": 500,
+  "programs_count": 24,
+  "active_programs_count": 22,
+  "subjects_count": 230,
+  "monthly_enrollment": [
+    { "month": "2026-01", "total": 143 },
+    { "month": "2026-02", "total": 167 }
+  ],
+  "course_distribution": [
+    {
+      "program_id": 1,
+      "program_name": "BS Computer Science",
+      "students_count": 28
+    }
+  ],
+  "attendance_trends": [
+    {
+      "date": "2026-03-10",
+      "attendance_rate": 91.2,
+      "is_holiday": false
+    }
+  ]
 }
 ```
 
-### `GET /api/user`
+## Security and Validation
 
-Response `200`:
-
-```json
-{
-	"user": {
-		"id": 1,
-		"name": "Test User",
-		"email": "admin@example.com"
-	}
-}
-```
-
-## Dashboard API Endpoints
-
-- `GET /api/dashboard/overview`
-- `GET /api/students`
-- `GET /api/programs`
-- `GET /api/subjects`
-- `GET /api/enrollments`
-- `GET /api/reports`
-
-Optional query params for list endpoints:
-
-- `per_page` (integer, min `1`, max `200`)
-
-### Example: `GET /api/dashboard/overview`
-
-```json
-{
-	"data": {
-		"students_total": 500,
-		"programs_total": 22,
-		"school_days_total": 230,
-		"average_attendance_rate": 88.94,
-		"latest_school_day": {
-			"date": "2026-06-30",
-			"attendance_rate": 92.2,
-			"is_holiday": false
-		}
-	}
-}
-```
-
-### Example: `GET /api/programs`
-
-```json
-{
-	"data": [
-		{
-			"id": 1,
-			"program_name": "BS Computer Science",
-			"department": "Computing",
-			"enrolled_students": 31
-		}
-	],
-	"meta": {
-		"current_page": 1,
-		"last_page": 1,
-		"per_page": 100,
-		"total": 22
-	},
-	"charts": {
-		"students_by_department": [
-			{ "department": "Computing", "students_total": 142 }
-		]
-	}
-}
-```
-
-### Example: `GET /api/subjects`
-
-```json
-{
-	"data": [
-		{
-			"id": 1,
-			"code": "CS101",
-			"subject_name": "Introduction to Computing",
-			"program_id": 1,
-			"program_name": "BS Computer Science",
-			"department": "Computing",
-			"units": 3
-		}
-	]
-}
-```
-
-### Example: `GET /api/enrollments`
-
-```json
-{
-	"data": [
-		{
-			"enrollment_id": 1,
-			"program_id": 1,
-			"student": {
-				"id": 1,
-				"name": "Jane Doe",
-				"email": "jane@example.com"
-			},
-			"program": {
-				"id": 1,
-				"name": "BS Computer Science",
-				"department": "Computing"
-			},
-			"status": "active",
-			"enrolled_at": "2026-03-13T09:00:00+00:00"
-		}
-	]
-}
-```
-
-### Example: `GET /api/reports`
-
-```json
-{
-	"data": {
-		"overview": {
-			"students_total": 500,
-			"programs_total": 22,
-			"subjects_total": 12,
-			"enrollments_total": 500
-		},
-		"attendance": {
-			"average_rate": 89.75,
-			"days_counted": 210
-		},
-		"students_per_program": [
-			{
-				"program_id": 1,
-				"program_name": "BS Computer Science",
-				"student_count": 31
-			}
-		]
-	}
-}
-```
-
-## Security
-
-- Login uses request validation (`LoginRequest`).
-- Listing endpoints validate input (`per_page`) before querying.
-- Protected routes are under `auth:sanctum`.
-- CORS is configured in `config/cors.php` with `FRONTEND_URL` support.
+- Input sanitization is enforced using dedicated FormRequest classes:
+  - `LoginRequest`
+  - `StudentsIndexRequest`
+  - `ProgramsIndexRequest`
+  - `SubjectsIndexRequest`
+  - `EnrollmentsIndexRequest`
+  - `DashboardOverviewRequest`
+  - `ReportsIndexRequest`
+- API data routes are protected by `auth:sanctum`.
+- CORS is configured in `config/cors.php` using `FRONTEND_URLS` with React local defaults.
