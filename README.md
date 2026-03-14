@@ -87,6 +87,7 @@ Public endpoints:
 
 - GET /api/weather
 - GET /api/dashboard/weather
+- GET /api/dashboard/mini-weather
 
 Protected with `auth:sanctum`:
 
@@ -95,9 +96,14 @@ Protected with `auth:sanctum`:
 - GET /api/dashboard/enrollment-trends
 - GET /api/dashboard/attendance-patterns
 - GET /api/dashboard/reliability-snapshot
+- GET /api/dashboard/summary
 - GET /api/dashboard/room-assignments
 - GET /api/dashboard/room-availability
 - GET /api/rooms
+- GET /api/courses
+- GET /api/courses-offered
+- GET /api/school-days
+- GET /api/academic-calendar
 - GET /api/students
 - GET /api/programs
 - GET /api/subjects
@@ -113,15 +119,22 @@ Protected with `auth:sanctum`:
 - `GET /api/dashboard/overview`: `months`
 - `GET /api/reports`: `months`
 - `GET /api/weather`: `city` or (`lat` and `lon`)
+- `GET /api/dashboard/mini-weather`: (`lat` and `lon`) for current location, or `city` with `explicit_city=true`
+- `GET /api/dashboard/enrollment-analytics`: optional `demo=true`
+- `GET /api/dashboard/summary`: optional `demo=true`
+- `GET /api/school-days`: `per_page`, `start_date`, `end_date`, `is_holiday`
 
 ## Weather Nexus
 
-`GET /api/weather` returns current weather plus a full 7-day forecast with daily hourly points.
+`GET /api/weather` returns current weather plus a 5-day forecast with daily hourly points.
+
+`GET /api/dashboard/mini-weather` returns compact data for the mini weather tab at the top of the dashboard.
+Mini weather is strict by default: it requires device coordinates (`lat` and `lon`) to avoid unintended fallback locations.
 
 Example request:
 
 ```http
-GET /api/weather?city=Manila
+GET /api/weather?lat=14.5902&lon=120.9816
 ```
 
 Example response:
@@ -129,12 +142,17 @@ Example response:
 ```json
 {
   "location": "Manila, PH",
+  "coordinates": {
+    "lat": 14.5902,
+    "lon": 120.9816
+  },
   "current": {
     "temperature": 31,
     "humidity": 70,
     "wind_speed": 4,
     "description": "Partly Cloudy",
-    "icon": "03d"
+    "icon": "03d",
+    "icon_url": "https://openweathermap.org/img/wn/03d@2x.png"
   },
   "forecast": [
     {
@@ -142,6 +160,7 @@ Example response:
       "date": "2026-03-14",
       "temperature": 31,
       "icon": "03d",
+      "icon_url": "https://openweathermap.org/img/wn/03d@2x.png",
       "hourly": [
         {"time": "09:00", "temp": 28},
         {"time": "12:00", "temp": 31},
@@ -153,11 +172,64 @@ Example response:
 }
 ```
 
+Mini weather response (`GET /api/dashboard/mini-weather`):
+
+```json
+{
+  "location": "Manila, PH",
+  "coordinates": {
+    "lat": 14.5902,
+    "lon": 120.9816
+  },
+  "temperature": 31,
+  "description": "Partly Cloudy",
+  "icon": "03d",
+  "icon_url": "https://openweathermap.org/img/wn/03d@2x.png",
+  "source": "live"
+}
+```
+
 Common weather errors:
 
-- `404` location not found
-- `502` provider failure or invalid key
-- `504` request timeout
+- If location is missing and cannot be resolved by IP, API returns `422` with `error_code: "weather_location_required"`.
+- If mini weather is called without `lat/lon`, API returns `422` with `error_code: "mini_weather_location_required"`.
+- If city is invalid, API returns `404` with `error_code: "weather_location_not_found"`.
+- If provider is rate-limited, API returns `429` with `error_code: "weather_provider_rate_limited"`.
+
+Frontend integration pattern (device location first):
+
+```javascript
+async function getDeviceCoords() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation not supported'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
+      },
+      (error) => reject(error),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
+async function loadWeatherCards() {
+  const { lat, lon } = await getDeviceCoords();
+
+  const [mainWeather, miniWeather] = await Promise.all([
+    fetch(`/api/weather?lat=${lat}&lon=${lon}`).then((r) => r.json()),
+    fetch(`/api/dashboard/mini-weather?lat=${lat}&lon=${lon}`).then((r) => r.json()),
+  ]);
+
+  return { mainWeather, miniWeather };
+}
+```
 
 ## Enrollment Analytics (Yearly)
 
@@ -221,6 +293,34 @@ Example response:
 ]
 ```
 
+`GET /api/school-days` returns academic calendar points with attendance, holiday flag, and event labels:
+
+```json
+[
+  {
+    "date": "2026-01-10",
+    "is_holiday": false,
+    "attendance_rate": 92.3,
+    "event": "Class Day"
+  }
+]
+```
+
+`GET /api/students` includes demographic details under `demographics` for presentation reporting:
+
+```json
+{
+  "id": 15,
+  "name": "Jane Doe",
+  "demographics": {
+    "gender": "Female",
+    "age": 20,
+    "age_group": "18-20",
+    "residency": "Commuter"
+  }
+}
+```
+
 ## Data Reliability Snapshot
 
 `GET /api/dashboard/reliability-snapshot` returns concise system-wide metrics:
@@ -232,6 +332,18 @@ Example response:
   "total_subjects": 100,
   "active_programs": 18,
   "average_attendance": 91
+}
+```
+
+`GET /api/dashboard/summary` returns presentation summary metrics (same data contract used by React top cards):
+
+```json
+{
+  "total_students": 520,
+  "total_programs": 20,
+  "total_subjects": 120,
+  "active_programs": 18,
+  "average_attendance": 92
 }
 ```
 

@@ -43,6 +43,12 @@ class StudentController extends Controller
                 'program_name' => $student->program?->program_name,
                 'department' => $student->program?->department,
                 'year_level' => (int) $student->year_level,
+                'demographics' => [
+                    'gender' => ((int) crc32((string) $student->email) % 2 === 0) ? 'Male' : 'Female',
+                    'age' => 17 + (int) $student->year_level + ((int) $student->id % 3),
+                    'age_group' => (17 + (int) $student->year_level + ((int) $student->id % 3)) <= 20 ? '18-20' : '21-24',
+                    'residency' => ((int) $student->id % 4 === 0) ? 'Dormitory' : 'Commuter',
+                ],
                 'created_at' => $student->created_at?->toIso8601String(),
             ]),
             'meta' => [

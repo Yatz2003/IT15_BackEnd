@@ -6,6 +6,7 @@ use App\Exceptions\WeatherProxyException;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
@@ -51,14 +52,20 @@ class WeatherService
             $query['lon'] = (float) $location['lon'];
         }
 
+        $locationCacheKey = array_key_exists('q', $query)
+            ? 'city:'.mb_strtolower((string) $query['q'])
+            : 'geo:'.round((float) $query['lat'], 4).','.round((float) $query['lon'], 4);
+
         $currentPayload = $this->requestPayload(
             (string) config('services.weather.current_url'),
             $query,
+            'current:'.$locationCacheKey,
         );
 
         $forecastPayload = $this->requestPayload(
             (string) config('services.weather.forecast_url'),
             $query,
+            'forecast:'.$locationCacheKey,
         );
 
         $current = $this->formatCurrent($currentPayload);
@@ -81,33 +88,41 @@ class WeatherService
         ];
     }
 
-    private function requestPayload(string $url, array $query): array
+    private function requestPayload(string $url, array $query, string $cacheKey): array
     {
-        try {
-            $response = Http::acceptJson()
-                ->timeout((int) config('services.weather.timeout', 10))
-                ->get($url, $query);
-        } catch (ConnectionException $exception) {
-            throw new WeatherProxyException(
-                'Weather provider request timed out.',
-                504,
-                'weather_timeout',
-            );
-        }
+        $ttlMinutes = max(1, (int) config('services.weather.cache_ttl_minutes', 10));
 
-        $this->assertSuccessfulResponse($response);
+        return Cache::remember(
+            'weather_api:'.$cacheKey,
+            now()->addMinutes($ttlMinutes),
+            function () use ($url, $query): array {
+                try {
+                    $response = Http::acceptJson()
+                        ->timeout((int) config('services.weather.timeout', 10))
+                        ->get($url, $query);
+                } catch (ConnectionException $exception) {
+                    throw new WeatherProxyException(
+                        'Weather provider request timed out.',
+                        504,
+                        'weather_timeout',
+                    );
+                }
 
-        $payload = $response->json();
+                $this->assertSuccessfulResponse($response);
 
-        if (! is_array($payload)) {
-            throw new WeatherProxyException(
-                'Weather provider returned an unexpected response.',
-                502,
-                'weather_provider_invalid_payload',
-            );
-        }
+                $payload = $response->json();
 
-        return $payload;
+                if (! is_array($payload)) {
+                    throw new WeatherProxyException(
+                        'Weather provider returned an unexpected response.',
+                        502,
+                        'weather_provider_invalid_payload',
+                    );
+                }
+
+                return $payload;
+            }
+        );
     }
 
     private function assertSuccessfulResponse(Response $response): void
@@ -125,6 +140,14 @@ class WeatherService
                 'Requested weather location was not found.',
                 404,
                 'weather_location_not_found',
+            );
+        }
+
+        if ($response->status() === 429) {
+            throw new WeatherProxyException(
+                'Weather provider rate limit reached. Please retry shortly.',
+                429,
+                'weather_provider_rate_limited',
             );
         }
 
@@ -165,6 +188,7 @@ class WeatherService
             'wind_speed' => round((float) $windSpeed, 1),
             'description' => mb_convert_case($description, MB_CASE_TITLE, 'UTF-8'),
             'icon' => $icon,
+            'icon_url' => $this->iconUrl($icon),
         ];
     }
 
@@ -242,9 +266,10 @@ class WeatherService
             );
         }
 
+        $forecastDays = max(1, min(7, (int) config('services.weather.forecast_days', 5)));
         $weeklyForecast = [];
 
-        for ($index = 0; $index < 7; $index++) {
+        for ($index = 0; $index < $forecastDays; $index++) {
             $date = $today->addDays($index)->toDateString();
             $dayLabel = $today->addDays($index)->format('D');
             $entry = $dailyForecast[$date] ?? null;
@@ -262,6 +287,7 @@ class WeatherService
                     'date' => $date,
                     'temperature' => (int) $current['temperature'],
                     'icon' => (string) $current['icon'],
+                    'icon_url' => $this->iconUrl((string) $current['icon']),
                     'hourly' => $todayHourly,
                 ];
 
@@ -274,6 +300,7 @@ class WeatherService
                     'date' => $entry['date'],
                     'temperature' => (int) $entry['temperature'],
                     'icon' => (string) $entry['icon'],
+                    'icon_url' => $this->iconUrl((string) $entry['icon']),
                     'hourly' => $entry['hourly'],
                 ];
 
@@ -287,6 +314,7 @@ class WeatherService
                 'date' => $date,
                 'temperature' => (int) $last['temperature'],
                 'icon' => (string) $last['icon'],
+                'icon_url' => $this->iconUrl((string) $last['icon']),
                 'hourly' => $last['hourly'],
             ];
         }
@@ -330,8 +358,8 @@ class WeatherService
         }
 
         return [
-            'lat' => (float) config('services.weather.default_lat', 14.5995),
-            'lon' => (float) config('services.weather.default_lon', 120.9842),
+            'lat' => null,
+            'lon' => null,
         ];
     }
 
@@ -349,5 +377,10 @@ class WeatherService
 
         // metric is expected from config by default.
         return (int) round($temperatureValue);
+    }
+
+    private function iconUrl(string $icon): string
+    {
+        return 'https://openweathermap.org/img/wn/'.$icon.'@2x.png';
     }
 }

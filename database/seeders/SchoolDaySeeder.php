@@ -24,8 +24,8 @@ class SchoolDaySeeder extends Seeder
                 continue;
             }
 
-            $isHoliday = $faker->boolean(8);
-            $attendanceRate = $isHoliday ? 0 : $faker->randomFloat(2, 72, 99.8);
+            $isHoliday = $faker->boolean(6);
+            $attendanceRate = $isHoliday ? 0 : $faker->randomFloat(2, 85, 98);
 
             $rows[] = [
                 'date' => $date->toDateString(),

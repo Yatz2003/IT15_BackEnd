@@ -18,6 +18,7 @@ class CurrentWeatherRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:120'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lon' => ['nullable', 'numeric', 'between:-180,180'],
+            'explicit_city' => ['nullable', 'boolean'],
         ];
     }
 
@@ -28,7 +29,7 @@ class CurrentWeatherRequest extends FormRequest
             $lat = $this->input('lat');
             $lon = $this->input('lon');
 
-            // Allow empty query so controller can use default coordinates.
+            // Allow empty query so controller can attempt IP-based resolution.
             if ($city === null && $lat === null && $lon === null) {
                 return;
             }

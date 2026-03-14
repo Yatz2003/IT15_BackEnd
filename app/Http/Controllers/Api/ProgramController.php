@@ -30,6 +30,8 @@ class ProgramController extends Controller
         $rows = $programs->getCollection()->map(fn (Program $program) => [
             'id' => $program->id,
             'program_name' => $program->program_name,
+            'course_name' => $program->program_name,
+            'course' => $program->program_name,
             'department' => $program->department,
             'is_active' => (bool) $program->is_active,
             'enrolled_students' => (int) $program->students_count,
