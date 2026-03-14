@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'weather' => [
+        'key' => env('WEATHER_API_KEY'),
+        'current_url' => env('WEATHER_API_BASE_URL', 'https://api.openweathermap.org/data/2.5/weather'),
+        'forecast_url' => env('WEATHER_FORECAST_BASE_URL', 'https://api.openweathermap.org/data/2.5/forecast'),
+        'units' => env('WEATHER_UNITS', 'metric'),
+        'default_lat' => env('WEATHER_DEFAULT_LAT', 14.5995),
+        'default_lon' => env('WEATHER_DEFAULT_LON', 120.9842),
+        'timeout' => env('WEATHER_API_TIMEOUT_SECONDS', 10),
+    ],
+
 ];

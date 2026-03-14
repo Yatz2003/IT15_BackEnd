@@ -14,7 +14,11 @@ class SubjectSeeder extends Seeder
     public function run(): void
     {
         $faker = fake();
-        $programIds = Program::query()->pluck('id');
+        $programIds = Program::query()->where('is_active', true)->pluck('id');
+
+        if ($programIds->isEmpty()) {
+            $programIds = Program::query()->pluck('id');
+        }
 
         if ($programIds->isEmpty()) {
             return;
@@ -28,7 +32,15 @@ class SubjectSeeder extends Seeder
             'Quantitative Methods',
             'Ethics and Society',
             'Research Methods',
+            'Academic Writing',
+            'Understanding the Self',
+            'Science, Technology and Society',
+            'Creative and Critical Thinking',
+            'Physics 1',
+            'Calculus 1',
+            'General Chemistry',
             'Database Fundamentals',
+            'Database Systems',
             'Systems Analysis',
             'Programming Fundamentals',
             'Data Structures',
@@ -37,12 +49,18 @@ class SubjectSeeder extends Seeder
             'Human Computer Interaction',
             'Operating Systems',
             'Networks and Security',
+            'Web Application Development',
+            'Cloud Fundamentals',
+            'Information Assurance',
+            'Artificial Intelligence Fundamentals',
             'Software Engineering Principles',
             'Advanced Project Management',
+            'Capstone Project 1',
+            'Capstone Project 2',
         ];
 
         foreach ($programIds as $programId) {
-            $count = $faker->numberBetween(8, 12);
+            $count = $faker->numberBetween(6, 8);
             $baseSubjects = collect($subjectPool)->shuffle()->take($count)->values();
             $createdIds = [];
 

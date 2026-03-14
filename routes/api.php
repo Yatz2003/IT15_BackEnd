@@ -7,9 +7,12 @@ use App\Http\Controllers\Api\ProgramController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\SubjectController;
+use App\Http\Controllers\Api\WeatherController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/weather', [WeatherController::class, 'show']);
+Route::get('/dashboard/weather', [WeatherController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -23,10 +26,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/reports', [ReportController::class, 'index']);
 
     Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
+    Route::get('/dashboard/enrollment-trends', [DashboardController::class, 'enrollmentTrends']);
+    Route::get('/dashboard/enrollment-analytics', [DashboardController::class, 'enrollmentAnalytics']);
+    Route::get('/dashboard/enrollment-analytics-yearly', [DashboardController::class, 'enrollmentAnalyticsYearly']);
+    Route::get('/dashboard/program-distribution', [DashboardController::class, 'programDistribution']);
+    Route::get('/dashboard/attendance-patterns', [DashboardController::class, 'attendancePatterns']);
+    Route::get('/dashboard/reliability-snapshot', [DashboardController::class, 'reliabilitySnapshot']);
+    Route::get('/dashboard/room-assignments', [DashboardController::class, 'roomAssignments']);
+    Route::get('/dashboard/room-availability', [DashboardController::class, 'roomAvailability']);
+    Route::get('/rooms', [DashboardController::class, 'rooms']);
 
-
-
-    Route::get('/students/enrollment-trends', [DashboardController::class, 'enrollmentTrends']);
-    Route::get('/courses/distribution', [DashboardController::class, 'courseDistribution']);
+    // Backward-compatible alias for existing frontend calls.
     Route::get('/attendance', [DashboardController::class, 'attendancePatterns']);
 });
