@@ -9,8 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
+ * @property string $subject_code
  * @property string $subject_name
  * @property int $program_id
+ * @property int $units
+ * @property string $semester
  * @property int|null $prerequisite_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -21,9 +24,16 @@ class Subject extends Model
     use HasFactory;
 
     protected $fillable = [
+        'subject_code',
         'subject_name',
         'program_id',
+        'units',
+        'semester',
         'prerequisite_id',
+    ];
+
+    protected $casts = [
+        'units' => 'integer',
     ];
 
     public function program(): BelongsTo

@@ -14,6 +14,38 @@ use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
+    public function enrollmentSummary(): JsonResponse
+    {
+        return response()->json([
+            'total_students' => Student::query()->count(),
+            'total_programs' => Program::query()->count(),
+            'total_subjects' => Subject::query()->count(),
+            'total_enrollments' => Enrollment::query()->count(),
+        ]);
+    }
+
+    public function programDistribution(): JsonResponse
+    {
+        $rows = Program::query()
+            ->withCount('students')
+            ->orderByDesc('students_count')
+            ->get(['program_name']);
+
+        return response()->json($rows->map(fn (Program $program): array => [
+            'program' => $program->program_name,
+            'students' => (int) $program->students_count,
+        ])->values());
+    }
+
+    public function attendanceSummary(): JsonResponse
+    {
+        return response()->json([
+            'school_days' => SchoolDay::query()->count(),
+            'holidays' => SchoolDay::query()->where('is_holiday', true)->count(),
+            'average_attendance' => round((float) SchoolDay::query()->where('is_holiday', false)->avg('attendance_rate'), 2),
+        ]);
+    }
+
     public function index(ReportsIndexRequest $request): JsonResponse
     {
         $validated = $request->validated();

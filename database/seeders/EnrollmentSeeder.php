@@ -47,6 +47,10 @@ class EnrollmentSeeder extends Seeder
                 $rows[] = [
                     'student_id' => $student->id,
                     'subject_id' => $subject->id,
+                    'program_id' => $student->program_id,
+                    'academic_year' => (string) now()->format('Y'),
+                    'semester' => $faker->randomElement(['First', 'Second']),
+                    'status' => $faker->randomElement(['Enrolled', 'Completed', 'Dropped']),
                     'enrolled_at' => $enrolledAt,
                     'created_at' => now(),
                     'updated_at' => now(),

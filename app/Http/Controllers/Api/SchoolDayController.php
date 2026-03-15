@@ -28,42 +28,34 @@ class SchoolDayController extends Controller
             $query->where('is_holiday', (bool) $validated['is_holiday']);
         }
 
-        $days = $query->paginate($validated['per_page'] ?? 100);
+        if (! empty($validated['per_page'])) {
+            $days = $query->paginate((int) $validated['per_page']);
 
-        return response()->json([
-            'data' => $days->getCollection()->map(function (SchoolDay $day): array {
-                $date = $day->date instanceof Carbon ? $day->date : Carbon::parse((string) $day->date);
+            return response()->json([
+                'data' => $days->getCollection()->map(fn (SchoolDay $day): array => $this->transformSchoolDay($day)),
+                'meta' => [
+                    'current_page' => $days->currentPage(),
+                    'last_page' => $days->lastPage(),
+                    'per_page' => $days->perPage(),
+                    'total' => $days->total(),
+                ],
+            ]);
+        }
 
-                return [
-                    'date' => $date->toDateString(),
-                    'is_holiday' => (bool) $day->is_holiday,
-                    'attendance_rate' => (float) $day->attendance_rate,
-                    'event' => $this->eventLabel($date, (bool) $day->is_holiday),
-                ];
-            }),
-            'meta' => [
-                'current_page' => $days->currentPage(),
-                'last_page' => $days->lastPage(),
-                'per_page' => $days->perPage(),
-                'total' => $days->total(),
-            ],
-        ]);
+        return response()->json(
+            $query->get(['date', 'day_name', 'is_holiday', 'event_name', 'attendance_rate'])
+                ->map(fn (SchoolDay $day): array => $this->transformSchoolDay($day))
+        );
     }
 
-    private function eventLabel(Carbon $date, bool $isHoliday): string
+    private function transformSchoolDay(SchoolDay $day): array
     {
-        if ($isHoliday) {
-            return 'Holiday';
-        }
-
-        if ((int) $date->format('m') === 10 && (int) $date->format('d') <= 15) {
-            return 'Midterm Week';
-        }
-
-        if ((int) $date->format('m') === 3 && (int) $date->format('d') >= 20) {
-            return 'Finals Period';
-        }
-
-        return 'Class Day';
+        return [
+            'date' => Carbon::parse((string) $day->date)->toDateString(),
+            'day_name' => (string) $day->day_name,
+            'is_holiday' => (bool) $day->is_holiday,
+            'event_name' => $day->event_name,
+            'attendance_rate' => (int) $day->attendance_rate,
+        ];
     }
 }

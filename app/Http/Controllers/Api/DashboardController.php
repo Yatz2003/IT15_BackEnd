@@ -16,6 +16,26 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    public function calendarSummary(): JsonResponse
+    {
+        $schoolDaysCount = SchoolDay::query()->count();
+        $holidayCount = SchoolDay::query()->where('is_holiday', true)->count();
+        $eventCount = SchoolDay::query()
+            ->whereNotNull('event_name')
+            ->where('event_name', '!=', '')
+            ->where('event_name', '!=', 'Regular Classes')
+            ->count();
+
+        return response()->json([
+            'school_days_count' => $schoolDaysCount,
+            'holiday_count' => $holidayCount,
+            'event_count' => $eventCount,
+            'school_days' => $schoolDaysCount,
+            'holidays' => $holidayCount,
+            'events' => $eventCount,
+        ]);
+    }
+
     public function overview(DashboardOverviewRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -138,6 +158,23 @@ class DashboardController extends Controller
 
     public function roomAssignments(): JsonResponse
     {
+        $subjectNames = Subject::query()
+            ->whereNotNull('subject_name')
+            ->orderBy('subject_name')
+            ->limit(5)
+            ->pluck('subject_name')
+            ->values();
+
+        if ($subjectNames->count() < 5) {
+            $subjectNames = collect([
+                'Programming Fundamentals',
+                'Physics 1',
+                'Calculus 1',
+                'Database Systems',
+                'General Chemistry',
+            ]);
+        }
+
         $rows = [
             [
                 'room' => 'A-301',
@@ -146,9 +183,9 @@ class DashboardController extends Controller
                 'program' => 'BS Information Technology',
                 'program_name' => 'BS Information Technology',
                 'programName' => 'BS Information Technology',
-                'course' => 'Programming Fundamentals',
-                'course_name' => 'Programming Fundamentals',
-                'courseName' => 'Programming Fundamentals',
+                'course' => (string) $subjectNames[0],
+                'course_name' => (string) $subjectNames[0],
+                'courseName' => (string) $subjectNames[0],
                 'instructor' => 'Prof. Maria Santos',
                 'instructor_name' => 'Prof. Maria Santos',
                 'instructorName' => 'Prof. Maria Santos',
@@ -165,9 +202,9 @@ class DashboardController extends Controller
                 'program' => 'BS Computer Science',
                 'program_name' => 'BS Computer Science',
                 'programName' => 'BS Computer Science',
-                'course' => 'Physics 1',
-                'course_name' => 'Physics 1',
-                'courseName' => 'Physics 1',
+                'course' => (string) $subjectNames[1],
+                'course_name' => (string) $subjectNames[1],
+                'courseName' => (string) $subjectNames[1],
                 'instructor' => 'Prof. Carlo Reyes',
                 'instructor_name' => 'Prof. Carlo Reyes',
                 'instructorName' => 'Prof. Carlo Reyes',
@@ -184,9 +221,9 @@ class DashboardController extends Controller
                 'program' => 'BS Business Administration',
                 'program_name' => 'BS Business Administration',
                 'programName' => 'BS Business Administration',
-                'course' => 'Calculus 1',
-                'course_name' => 'Calculus 1',
-                'courseName' => 'Calculus 1',
+                'course' => (string) $subjectNames[2],
+                'course_name' => (string) $subjectNames[2],
+                'courseName' => (string) $subjectNames[2],
                 'instructor' => 'Prof. Angelica Cruz',
                 'instructor_name' => 'Prof. Angelica Cruz',
                 'instructorName' => 'Prof. Angelica Cruz',
@@ -203,9 +240,9 @@ class DashboardController extends Controller
                 'program' => 'BS Information Technology',
                 'program_name' => 'BS Information Technology',
                 'programName' => 'BS Information Technology',
-                'course' => 'Database Systems',
-                'course_name' => 'Database Systems',
-                'courseName' => 'Database Systems',
+                'course' => (string) $subjectNames[3],
+                'course_name' => (string) $subjectNames[3],
+                'courseName' => (string) $subjectNames[3],
                 'instructor' => 'Prof. Daniel Ramos',
                 'instructor_name' => 'Prof. Daniel Ramos',
                 'instructorName' => 'Prof. Daniel Ramos',
@@ -222,9 +259,9 @@ class DashboardController extends Controller
                 'program' => 'BS Information Systems',
                 'program_name' => 'BS Information Systems',
                 'programName' => 'BS Information Systems',
-                'course' => 'General Chemistry',
-                'course_name' => 'General Chemistry',
-                'courseName' => 'General Chemistry',
+                'course' => (string) $subjectNames[4],
+                'course_name' => (string) $subjectNames[4],
+                'courseName' => (string) $subjectNames[4],
                 'instructor' => 'Prof. Leanne Villanueva',
                 'instructor_name' => 'Prof. Leanne Villanueva',
                 'instructorName' => 'Prof. Leanne Villanueva',

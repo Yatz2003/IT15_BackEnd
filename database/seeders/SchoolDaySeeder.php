@@ -13,9 +13,34 @@ class SchoolDaySeeder extends Seeder
      */
     public function run(): void
     {
-        $faker = fake();
         $startDate = Carbon::create(2025, 8, 1);
-        $endDate = Carbon::create(2026, 6, 30);
+        $endDate = Carbon::create(2026, 5, 31);
+
+        $eventMap = [
+            '2025-08-04' => 'Orientation Day',
+            '2025-10-13' => 'Midterm Exams',
+            '2025-11-14' => 'Research Symposium',
+            '2026-01-23' => 'Sports Festival',
+            '2026-03-23' => 'Final Exams',
+            '2026-05-25' => 'Graduation Day',
+        ];
+
+        $holidayDates = [
+            '2025-08-21',
+            '2025-11-01',
+            '2025-11-30',
+            '2025-12-08',
+            '2025-12-25',
+            '2026-01-01',
+            '2026-02-25',
+            '2026-04-02',
+            '2026-04-03',
+            '2026-05-01',
+        ];
+
+        $holidayLookup = collect($holidayDates)
+            ->mapWithKeys(fn (string $date): array => [$date => true])
+            ->all();
 
         $rows = [];
 
@@ -24,22 +49,30 @@ class SchoolDaySeeder extends Seeder
                 continue;
             }
 
-            $isHoliday = $faker->boolean(6);
-            $attendanceRate = $isHoliday ? 0 : $faker->randomFloat(2, 85, 98);
+            $dateString = $date->toDateString();
+            $isHoliday = isset($holidayLookup[$dateString]);
+            $eventName = $eventMap[$dateString] ?? ($isHoliday ? 'University Holiday' : 'Regular Classes');
+            $attendanceRate = $isHoliday ? 0 : random_int(80, 98);
 
             $rows[] = [
-                'date' => $date->toDateString(),
-                'attendance_rate' => $attendanceRate,
+                'date' => $dateString,
+                'day_name' => $date->format('l'),
                 'is_holiday' => $isHoliday,
+                'event_name' => $eventName,
+                'attendance_rate' => $attendanceRate,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
         }
 
+        if (count($rows) < 200) {
+            throw new \RuntimeException('SchoolDaySeeder must generate at least 200 records.');
+        }
+
         SchoolDay::query()->upsert(
             $rows,
             ['date'],
-            ['attendance_rate', 'is_holiday', 'updated_at']
+            ['day_name', 'is_holiday', 'event_name', 'attendance_rate', 'updated_at']
         );
     }
 }
